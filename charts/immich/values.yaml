@@ -9,7 +9,7 @@ controllers:
     containers:
       main:
         image:
-          tag: v2.6.3
+          tag: v2.7.0
         env:
           REDIS_HOSTNAME: '{{ printf "%s-valkey" .Release.Name }}'
           IMMICH_MACHINE_LEARNING_URL: '{{ printf "http://%s-machine-learning:3003" .Release.Name }}'
@@ -71,8 +71,9 @@ server:
       containers:
         main:
           image:
-            repository: ghcr.io/immich-app/immich-server
-            pullPolicy: IfNotPresent
+            repository: ghcr.io/scotthesterberg/immich-server
+            tag: pet-test
+            pullPolicy: Always
   ingress:
     main:
       enabled: false
@@ -94,12 +95,20 @@ machine-learning:
       containers:
         main:
           image:
-            repository: ghcr.io/immich-app/immich-machine-learning
-            pullPolicy: IfNotPresent
+            repository: ghcr.io/scotthesterberg/immich-machine-learning
+            tag: pet-test
+            pullPolicy: Always
           env:
             TRANSFORMERS_CACHE: /cache
             HF_XET_CACHE: /cache/huggingface-xet
             MPLCONFIGDIR: /cache/matplotlib-config
+          resources:
+            # If recognizePets is enabled, it is recommended to provide at least 4Gi of memory to the machine-learning container.
+            # limits:
+            #   memory: 4Gi
+            # requests:
+            #   cpu: 100m
+            #   memory: 1Gi
   persistence:
     cache:
       enabled: true
