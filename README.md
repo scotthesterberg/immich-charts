@@ -36,6 +36,27 @@ of all possible changes within the `charts/immich/values.yaml` file. Anything no
 
 This chart uses the [common library](https://github.com/bjw-s-labs/helm-charts/tree/common-4.3.0/charts/library/common). Top level keys like `controllers` are applied to every component of the Immich stack, and the entries under the `server`, `microservices`, etc... keys define the specific values for each component. You can freely add more top level keys to be applied to all the components, please reference [the common library's values.yaml](https://github.com/bjw-s-labs/helm-charts/blob/common-4.3.0/charts/library/common/values.yaml) to see what keys are available.
 
+## Machine Learning Resources
+
+If you enable pet recognition, the machine-learning component requires additional memory.
+A minimum of 4Gi of memory is recommended for the machine-learning container when `recognizePets` is enabled.
+
+You can configure this in your `values.yaml`:
+
+```yaml
+machine-learning:
+  controllers:
+    main:
+      containers:
+        main:
+          resources:
+            limits:
+              memory: 4Gi
+            requests:
+              cpu: 100m
+              memory: 1Gi
+```
+
 ## Uninstalling the Chart
 
 To see the currently installed Immich chart:
