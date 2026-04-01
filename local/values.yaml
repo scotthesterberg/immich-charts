@@ -24,9 +24,39 @@ server:
                 secretKeyRef:
                   name: immich-database-app
                   key: dbname
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 4 # Allow server to burst, but reserved at 500m
+
+machine-learning:
+  controllers:
+    main:
+      pod:
+        priorityClassName: background
+      containers:
+        main:
+          env:
+            # Limit the number of threads used by the ML models to prevent starving other processes
+            MACHINE_LEARNING_REQUEST_THREADS: 2
+            # Limit ONNX threads too
+            MACHINE_LEARNING_MODEL_INTER_OP_THREADS: 1
+            MACHINE_LEARNING_MODEL_INTRA_OP_THREADS: 2
+          resources:
+            requests:
+              cpu: 100m # Low reservation ensures low priority
+              memory: 2Gi
+            limits:
+              cpu: 3 # Hard limit to 3 CPUs as requested
+              memory: 4Gi
 
 valkey:
   enabled: true
+  persistence:
+    data:
+      type: emptyDir
 
 immich:
   persistence:
