@@ -8,6 +8,14 @@ spec:
   storage:
     size: 1Gi
 
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2 # Limit DB to 2 CPUs as requested
+      memory: 2Gi
+
   imageName: ghcr.io/tensorchord/cloudnative-vectorchord:16.9-0.4.3
 
   postgresql:
