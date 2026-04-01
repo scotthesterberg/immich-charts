@@ -4,26 +4,10 @@ server:
       containers:
         main:
           env:
-            DB_HOSTNAME:
-              valueFrom:
-                secretKeyRef:
-                  name: immich-database-app
-                  key: host
-            DB_USERNAME:
-              valueFrom:
-                secretKeyRef:
-                  name: immich-database-app
-                  key: user
-            DB_PASSWORD:
-              valueFrom:
-                secretKeyRef:
-                  name: immich-database-app
-                  key: password
-            DB_DATABASE_NAME:
-              valueFrom:
-                secretKeyRef:
-                  name: immich-database-app
-                  key: dbname
+            DB_HOSTNAME: immich-postgresql
+            DB_USERNAME: immich
+            DB_PASSWORD: immich-password
+            DB_DATABASE_NAME: immich
           resources:
             requests:
               cpu: 500m
