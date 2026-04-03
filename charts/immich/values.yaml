@@ -72,7 +72,7 @@ server:
         main:
           image:
             repository: ghcr.io/scotthesterberg/immich-server
-            tag: pet-test
+            tag: pet-test14
             pullPolicy: Always
   ingress:
     main:
@@ -96,7 +96,7 @@ machine-learning:
         main:
           image:
             repository: ghcr.io/scotthesterberg/immich-machine-learning
-            tag: pet-test
+            tag: pet-test14
             pullPolicy: Always
           env:
             TRANSFORMERS_CACHE: /cache
