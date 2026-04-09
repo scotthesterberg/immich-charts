@@ -3,6 +3,9 @@
 ## Refer there for more detail about the supported values
 
 # These entries are shared between all the Immich components
+# Note: It is recommended to define resources and other component-specific
+# configurations under their respective keys (server, machine-learning, microservices, etc.)
+# to ensure they are correctly applied.
 
 controllers:
   main:
@@ -13,7 +16,14 @@ controllers:
         env:
           REDIS_HOSTNAME: '{{ printf "%s-valkey" .Release.Name }}'
           IMMICH_MACHINE_LEARNING_URL: '{{ printf "http://%s-machine-learning:3003" .Release.Name }}'
-          # Add the env vars to connect to your database here.
+          DB_HOSTNAME: '{{ printf "%s-postgres" .Release.Name }}'
+          DB_USERNAME: immich
+          DB_DATABASE_NAME: immich
+          # DB_PASSWORD should be set via existingSecret or here
+          DB_PASSWORD: immich-password
+          # IMMICH_PET_RECOGNITION_ENABLED: "true"
+          # IMMICH_PET_DETECTION_MODEL_NAME: "pet-recognition"
+          # IMMICH_PET_RECOGNITION_MODEL_NAME: "pet-recognition"
 
 immich:
   metrics:
@@ -53,12 +63,37 @@ valkey:
             repository: docker.io/valkey/valkey
             tag: 9.1-alpine@sha256:355ae2c6c965769a0d9b9810711e6befd5b79fe676d1faa848247733ad6a4408
             pullPolicy: IfNotPresent
+          resources: {}
   persistence:
     data:
       enabled: true
       size: 1Gi
       # Optional: Set this to persistentVolumeClaim to keep job queues persistent
       type: emptyDir
+      accessMode: ReadWriteOnce
+      # storageClass: your-class
+
+postgres:
+  enabled: false
+  controllers:
+    main:
+      containers:
+        main:
+          image:
+            repository: ghcr.io/immich-app/postgres
+            tag: 14-vectorchord0.4.3-pgvectors0.2.0
+            pullPolicy: IfNotPresent
+          env:
+            POSTGRES_USER: immich
+            POSTGRES_PASSWORD: immich-password
+            POSTGRES_DB: immich
+            POSTGRES_INITDB_ARGS: '--data-checksums'
+          resources: {}
+  persistence:
+    data:
+      enabled: true
+      size: 10Gi
+      type: persistentVolumeClaim
       accessMode: ReadWriteOnce
       # storageClass: your-class
 
@@ -71,9 +106,9 @@ server:
       containers:
         main:
           image:
-            repository: ghcr.io/scotthesterberg/immich-server
-            tag: pet-test14
-            pullPolicy: Always
+            repository: ghcr.io/immich-app/immich-server
+            pullPolicy: IfNotPresent
+          resources: {}
   ingress:
     main:
       enabled: false
@@ -88,6 +123,22 @@ server:
                 identifier: main
       tls: []
 
+microservices:
+  enabled: false
+  controllers:
+    main:
+      containers:
+        main:
+          image:
+            repository: ghcr.io/immich-app/immich-server
+            pullPolicy: IfNotPresent
+          env:
+            # Separating microservices logic from the main server
+            # Note: Recent versions of Immich might have this combined, 
+            # but splitting allows for different resource priorities.
+            IMMICH_MICROSERVICES_ENABLED: "true"
+          resources: {}
+
 machine-learning:
   enabled: true
   controllers:
@@ -95,20 +146,13 @@ machine-learning:
       containers:
         main:
           image:
-            repository: ghcr.io/scotthesterberg/immich-machine-learning
-            tag: pet-test14
-            pullPolicy: Always
+            repository: ghcr.io/immich-app/immich-machine-learning
+            pullPolicy: IfNotPresent
           env:
             TRANSFORMERS_CACHE: /cache
             HF_XET_CACHE: /cache/huggingface-xet
             MPLCONFIGDIR: /cache/matplotlib-config
-          resources:
-            # If recognizePets is enabled, it is recommended to provide at least 4Gi of memory to the machine-learning container.
-            # limits:
-            #   memory: 4Gi
-            # requests:
-            #   cpu: 100m
-            #   memory: 1Gi
+          resources: {}
   persistence:
     cache:
       enabled: true

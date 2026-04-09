@@ -107,10 +107,14 @@ persistence:
     {{- else }}
     name: {{ .Release.Name }}-immich-config
     {{- end }}
+    globalMounts:
+      - path: /config
 {{- end }}
   data:
     enabled: true
     existingClaim: {{ .Values.immich.persistence.library.existingClaim }}
+    globalMounts:
+      - path: /data
 {{- end }}
 
 {{ if .Values.server.enabled }}

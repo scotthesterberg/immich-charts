@@ -1,0 +1,79 @@
+{{- define "immich.microservices.hardcodedValues" -}}
+global:
+  nameOverride: microservices
+
+{{- if .Values.immich.configuration }}
+defaultPodOptions:
+  annotations:
+    checksum/config: {{ .Values.immich.configuration | toYaml | sha256sum }}
+{{- end }}
+
+controllers:
+  main:
+    type: deployment
+    strategy: RollingUpdate
+    containers:
+      main:
+        env:
+          {{- if or .Values.immich.configuration .Values.immich.existingConfiguration }}
+          IMMICH_CONFIG_FILE: /config/immich-config.yaml
+          {{- end }}
+        probes:
+          # Microservices might not have an HTTP port but we can check if it is running
+          liveness:
+            enabled: true
+            custom: true
+            spec:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - "ps aux | grep -q 'node dist/main'"
+              initialDelaySeconds: 30
+              periodSeconds: 10
+              timeoutSeconds: 5
+              failureThreshold: 3
+          readiness:
+            enabled: true
+            custom: true
+            spec:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - "ps aux | grep -q 'node dist/main'"
+              initialDelaySeconds: 5
+              periodSeconds: 10
+              timeoutSeconds: 5
+              failureThreshold: 3
+
+persistence:
+{{- if or .Values.immich.configuration .Values.immich.existingConfiguration }}
+  config:
+    enabled: true
+    {{- if eq .Values.immich.configurationKind "Secret" }}
+    type: secret
+    {{- else }}
+    type: configMap
+    {{- end }}
+    {{- if .Values.immich.existingConfiguration }}
+    name: {{ .Values.immich.existingConfiguration }}
+    {{- else }}
+    name: {{ .Release.Name }}-immich-config
+    {{- end }}
+    globalMounts:
+      - path: /config
+{{- end }}
+  data:
+    enabled: true
+    existingClaim: {{ .Values.immich.persistence.library.existingClaim }}
+    globalMounts:
+      - path: /data
+{{- end }}
+
+{{ if .Values.microservices.enabled }}
+{{- $ctx := deepCopy . -}}
+{{- $_ := get .Values "microservices" | mergeOverwrite $ctx.Values -}}
+{{- $_ = include "immich.microservices.hardcodedValues" . | fromYaml | merge $ctx.Values -}}
+{{- include "bjw-s.common.loader.all" $ctx }}
+{{ end }}

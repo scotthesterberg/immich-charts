@@ -1,0 +1,76 @@
+{{- define "immich.postgres.hardcodedValues" -}}
+global:
+  nameOverride: postgres
+
+controllers:
+  main:
+    type: deployment
+    strategy: Recreate
+    pod:
+      securityContext:
+        fsGroup: 999
+    containers:
+      main:
+        ports:
+          - name: postgres
+            containerPort: 5432
+            protocol: TCP
+        probes:
+          liveness:
+            enabled: true
+            custom: true
+            spec:
+              exec:
+                command:
+                  - pg_isready
+                  - -U
+                  - {{ .Values.postgres.controllers.main.containers.main.env.POSTGRES_USER | default "immich" | quote }}
+                  - -d
+                  - {{ .Values.postgres.controllers.main.containers.main.env.POSTGRES_DB | default "immich" | quote }}
+              initialDelaySeconds: 15
+              periodSeconds: 10
+              timeoutSeconds: 5
+              failureThreshold: 6
+          readiness:
+            enabled: true
+            custom: true
+            spec:
+              exec:
+                command:
+                  - pg_isready
+                  - -U
+                  - {{ .Values.postgres.controllers.main.containers.main.env.POSTGRES_USER | default "immich" | quote }}
+                  - -d
+                  - {{ .Values.postgres.controllers.main.containers.main.env.POSTGRES_DB | default "immich" | quote }}
+              initialDelaySeconds: 5
+              periodSeconds: 10
+              timeoutSeconds: 5
+              failureThreshold: 6
+
+service:
+  main:
+    enabled: true
+    controller: main
+    primary: true
+    type: ClusterIP
+    ports:
+      postgres:
+        enabled: true
+        primary: true
+        port: 5432
+        targetPort: postgres
+        protocol: TCP
+
+persistence:
+  data:
+    enabled: true
+    globalMounts:
+      - path: /var/lib/postgresql/data
+{{- end }}
+
+{{ if .Values.postgres.enabled }}
+{{- $ctx := deepCopy . -}}
+{{- $_ := get .Values "postgres" | mergeOverwrite $ctx.Values -}}
+{{- $_ = include "immich.postgres.hardcodedValues" . | fromYaml | merge $ctx.Values -}}
+{{- include "bjw-s.common.loader.all" $ctx }}
+{{ end }}

@@ -23,8 +23,9 @@ You should not copy the full values.yaml from this repository. Only set the valu
 There are a few things that you are required to configure in your values.yaml before installing the chart:
 * You need to separately create a PVC for your library volume and configure `immich.persistence.library.existingClaim` to reference that PVC
 * You need to make sure that Immich has access to a redis and postgresql instance. 
-  * Redis can be enabled directly in the values.yaml, or by manually setting the `env` to point to an existing instance.
-  * You need to deploy a suitable postgres instance with the vectorchord extension yourself. It is recommended to use [cloudnative-pg](https://cloudnative-pg.io/) with the [tensorchord/cloudnative-vectorchord](https://github.com/tensorchord/cloudnative-vectorchord/pkgs/container/cloudnative-vectorchord) container image. An example cluster manifest can be found [here](./local/cloudnative-pg.yaml).
+  * Redis (via Valkey) can be enabled directly in the `values.yaml` by setting `valkey.enabled: true`.
+  * Postgres can now be optionally deployed by the chart by setting `postgres.enabled: true`. This uses the official Immich-optimized Postgres image with vector support.
+  * Alternatively, you can point to an existing Postgres instance by setting the environment variables under `controllers.main.containers.main.env`.
 * You need to set `image.tag` to the version you want to use, as this chart does not update with every Immich release.
 
 # Configuration
@@ -34,27 +35,61 @@ of all possible changes within the `charts/immich/values.yaml` file. Anything no
 
 ## Chart architecture 
 
-This chart uses the [common library](https://github.com/bjw-s-labs/helm-charts/tree/common-4.3.0/charts/library/common). Top level keys like `controllers` are applied to every component of the Immich stack, and the entries under the `server`, `microservices`, etc... keys define the specific values for each component. You can freely add more top level keys to be applied to all the components, please reference [the common library's values.yaml](https://github.com/bjw-s-labs/helm-charts/blob/common-4.3.0/charts/library/common/values.yaml) to see what keys are available.
+This chart uses the [common library](https://github.com/bjw-s-labs/helm-charts/tree/common-4.3.0/charts/library/common). 
+- **Global Settings:** Top level keys like `controllers` are applied to every component of the Immich stack (server, machine-learning, microservices, valkey, postgres).
+- **Component-Specific Settings:** Entries under keys like `server`, `microservices`, `machine-learning`, `valkey`, and `postgres` define specific values for each component. These will override or merge with the global settings.
 
-## Machine Learning Resources
+### Microservices Separation
 
-If you enable pet recognition, the machine-learning component requires additional memory.
-A minimum of 4Gi of memory is recommended for the machine-learning container when `recognizePets` is enabled.
-
-You can configure this in your `values.yaml`:
+By default, recent Immich versions combine the server and microservices logic. However, for better resource management and process priority (e.g., preventing the web server from hanging during heavy transcoding), you can split them:
 
 ```yaml
+microservices:
+  enabled: true
+  controllers:
+    main:
+      pod:
+        priorityClassName: <your-priority-class>
+      containers:
+        main:
+          resources:
+            requests:
+              cpu: 200m
+              memory: 1Gi
+            limits:
+              memory: 4Gi
+```
+
+> [!TIP]
+> Setting a lower pod priority for `machine-learning` and `microservices` components can prevent them from "choking" the web server or other critical pods when the system is under heavy upload or transcoding load.
+
+### Component Resources and Priorities
+
+Best practice is to define resources and priorities per component to ensure they are correctly applied to the specific deployment:
+
+```yaml
+server:
+  controllers:
+    main:
+      pod:
+        priorityClassName: <high-priority-class>
+      containers:
+        main:
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+
 machine-learning:
   controllers:
     main:
+      pod:
+        priorityClassName: <low-priority-class>
       containers:
         main:
           resources:
             limits:
               memory: 4Gi
-            requests:
-              cpu: 100m
-              memory: 1Gi
 ```
 
 ## Uninstalling the Chart

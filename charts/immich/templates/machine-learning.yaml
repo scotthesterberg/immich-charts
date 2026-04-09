@@ -50,6 +50,12 @@ service:
         port: 3003
         targetPort: http
         protocol: HTTP
+
+persistence:
+  cache:
+    enabled: true
+    globalMounts:
+      - path: /cache
 {{- end }}
 
 {{- /* Have to reference with index here because the dash breaks a normal dereference */}}

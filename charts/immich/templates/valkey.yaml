@@ -68,6 +68,12 @@ service:
         protocol: TCP
       http:
         enabled: false
+
+persistence:
+  data:
+    enabled: true
+    globalMounts:
+      - path: /data
 {{- end }}
 
 {{ if .Values.valkey.enabled }}
